@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Display System</title>
     <style>
+        :root {
+            --header-size: 4rem;
+            --task-font-size: 1.5rem;
+            --task-card-height: auto;
+            --task-card-padding: 20px 30px;
+            --divider-height: 50vh;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -66,7 +74,8 @@
         }
 
         .tv-display.split-view .tasks-section {
-            flex: 1;
+            height: var(--divider-height);
+            flex: none;
             padding: 40px;
             overflow-y: auto;
         }
@@ -89,8 +98,15 @@
             margin-bottom: 40px;
         }
 
+        .tv-header .header-logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            display: block;
+        }
+
         .tv-header h1 {
-            font-size: 4rem;
+            font-size: var(--header-size);
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
@@ -110,7 +126,8 @@
         .task-card {
             background: white;
             border-radius: 12px;
-            padding: 20px 30px;
+            padding: var(--task-card-padding);
+            min-height: var(--task-card-height);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
             transition: transform 0.2s ease;
             display: flex;
@@ -133,7 +150,7 @@
         }
 
         .task-card h3 {
-            font-size: 1.5rem;
+            font-size: var(--task-font-size);
             margin-bottom: 8px;
             color: #333;
         }
@@ -144,7 +161,7 @@
         }
 
         .task-card p {
-            font-size: 1.1rem;
+            font-size: calc(var(--task-font-size) * 0.73);
             color: #666;
             line-height: 1.4;
             margin: 0;
@@ -385,7 +402,8 @@
         <div id="tvDisplay" class="tv-display active">
             <div class="tasks-section">
                 <div class="tv-header">
-                    <h1>📋 CALEA Proofs Needed</h1>
+                    <img src="badge.png" alt="Sheriff Badge" class="header-logo">
+                    <h1>CALEA Proofs Needed</h1>
                     <div class="date-time" id="dateTime"></div>
                 </div>
                 <div id="tvTasksContainer">
@@ -449,6 +467,39 @@
                 </div>
 
                 <div class="panel-section">
+                    <h2>Visual Customization</h2>
+                    <div class="form-group">
+                        <label>Header Text Size (rem)</label>
+                        <input type="number" id="headerSize" min="2" max="8" step="0.5" value="4" placeholder="4">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 4rem (Recommended: 2-6)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Task Font Size (rem)</label>
+                        <input type="number" id="taskFontSize" min="0.8" max="3" step="0.1" value="1.5" placeholder="1.5">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 1.5rem (Recommended: 1-2.5)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Task Card Height (px)</label>
+                        <input type="number" id="taskCardHeight" min="50" max="300" step="10" placeholder="Auto">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Leave empty for auto-height
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Horizontal Divider Position (%)</label>
+                        <input type="number" id="dividerPosition" min="20" max="80" step="5" value="50" placeholder="50">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 50% (tasks take top 50%, webpage takes bottom 50%)
+                        </small>
+                    </div>
+                    <button onclick="saveVisualSettings()" class="btn btn-success">Save Visual Settings</button>
+                </div>
+
+                <div class="panel-section">
                     <h2>Current Tasks</h2>
                     <div id="adminTasksList">
                         <div class="loading">Loading tasks...</div>
@@ -465,6 +516,12 @@
             splitView: false,
             webpageUrl: ''
         };
+        let visualSettings = {
+            headerSize: '4rem',
+            taskFontSize: '1.5rem',
+            taskCardHeight: 'auto',
+            dividerPosition: '50vh'
+        };
         let refreshInterval;
 
         // API endpoints
@@ -475,10 +532,12 @@
             // Try to load tasks, but use localStorage as fallback
             await loadTasks();
             await loadDisplaySettings();
+            await loadVisualSettings();
             updateDateTime();
             setInterval(updateDateTime, 1000);
             startAutoRefresh();
             applyDisplaySettings();
+            applyVisualSettings();
         }
 
         // Fallback to localStorage if Netlify functions aren't working
@@ -822,6 +881,62 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('splitViewMode').addEventListener('change', updateWebpageUrlVisibility);
         });
+
+        // Load visual settings
+        async function loadVisualSettings() {
+            try {
+                const data = localStorage.getItem('visualSettings');
+                if (data) {
+                    visualSettings = JSON.parse(data);
+                }
+            } catch (error) {
+                console.error('Error loading visual settings:', error);
+            }
+            
+            // Update UI in admin panel
+            const headerSize = parseFloat(visualSettings.headerSize) || 4;
+            const taskFontSize = parseFloat(visualSettings.taskFontSize) || 1.5;
+            const taskCardHeight = visualSettings.taskCardHeight === 'auto' ? '' : parseInt(visualSettings.taskCardHeight);
+            const dividerPosition = parseInt(visualSettings.dividerPosition) || 50;
+            
+            document.getElementById('headerSize').value = headerSize;
+            document.getElementById('taskFontSize').value = taskFontSize;
+            document.getElementById('taskCardHeight').value = taskCardHeight;
+            document.getElementById('dividerPosition').value = dividerPosition;
+        }
+
+        // Save visual settings
+        async function saveVisualSettings() {
+            const headerSize = parseFloat(document.getElementById('headerSize').value) || 4;
+            const taskFontSize = parseFloat(document.getElementById('taskFontSize').value) || 1.5;
+            const taskCardHeightInput = document.getElementById('taskCardHeight').value;
+            const taskCardHeight = taskCardHeightInput ? `${taskCardHeightInput}px` : 'auto';
+            const dividerPosition = parseInt(document.getElementById('dividerPosition').value) || 50;
+            
+            visualSettings = {
+                headerSize: `${headerSize}rem`,
+                taskFontSize: `${taskFontSize}rem`,
+                taskCardHeight: taskCardHeight,
+                dividerPosition: `${dividerPosition}vh`
+            };
+            
+            try {
+                localStorage.setItem('visualSettings', JSON.stringify(visualSettings));
+                showStatus('Visual settings saved successfully!', 'success');
+                applyVisualSettings();
+            } catch (error) {
+                showStatus('Error saving visual settings', 'error');
+            }
+        }
+
+        // Apply visual settings to the page
+        function applyVisualSettings() {
+            const root = document.documentElement;
+            root.style.setProperty('--header-size', visualSettings.headerSize);
+            root.style.setProperty('--task-font-size', visualSettings.taskFontSize);
+            root.style.setProperty('--task-card-height', visualSettings.taskCardHeight);
+            root.style.setProperty('--divider-height', visualSettings.dividerPosition);
+        }
 
         // Start the app
         init();
