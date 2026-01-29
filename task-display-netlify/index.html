@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Display System</title>
     <style>
+        :root {
+            --header-size: 4rem;
+            --task-font-size: 1.5rem;
+            --task-card-height: auto;
+            --task-card-padding: 20px 30px;
+            --divider-height: 50vh;
+            --header-section-height: auto;
+            --badge-size: 150px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -57,14 +67,54 @@
             display: block;
         }
 
+        .tv-display.split-view {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .tv-display.split-view .tasks-section {
+            height: var(--divider-height);
+            flex: none;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .tv-display.split-view .webpage-section {
+            flex: 1;
+            position: relative;
+            background: white;
+        }
+
+        .tv-display.split-view .webpage-section iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
         .tv-header {
             text-align: center;
             color: white;
             margin-bottom: 40px;
+            min-height: var(--header-section-height);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tv-header .header-logo {
+            width: var(--badge-size);
+            height: var(--badge-size);
+            margin-bottom: 20px;
+            display: block;
+            object-fit: contain;
         }
 
         .tv-header h1 {
-            font-size: 4rem;
+            font-size: var(--header-size);
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
@@ -75,30 +125,41 @@
         }
 
         .tasks-grid {
-            display: grid;
-            gap: 20px;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 100%;
         }
 
         .task-card {
             background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease;
+            border-radius: 12px;
+            padding: var(--task-card-padding);
+            min-height: var(--task-card-height);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
         }
 
         .task-card:hover {
-            transform: translateY(-5px);
+            transform: translateX(5px);
         }
 
         .task-card.completed {
             opacity: 0.6;
         }
 
+        .task-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
         .task-card h3 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+            font-size: var(--task-font-size);
+            margin-bottom: 8px;
             color: #333;
         }
 
@@ -108,18 +169,20 @@
         }
 
         .task-card p {
-            font-size: 1.2rem;
+            font-size: calc(var(--task-font-size) * 0.73);
             color: #666;
-            line-height: 1.6;
+            line-height: 1.4;
+            margin: 0;
         }
 
         .task-card .task-priority {
             display: inline-block;
-            padding: 6px 16px;
+            padding: 8px 20px;
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 600;
-            margin-top: 15px;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .priority-high {
@@ -163,7 +226,7 @@
         .admin-content {
             display: grid;
             gap: 30px;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         }
 
         @media (max-width: 968px) {
@@ -345,12 +408,18 @@
     <div class="container">
         <!-- TV Display Mode -->
         <div id="tvDisplay" class="tv-display active">
-            <div class="tv-header">
-                <h1>📋 Task Board</h1>
-                <div class="date-time" id="dateTime"></div>
+            <div class="tasks-section">
+                <div class="tv-header">
+                    <img src="./badge.png" alt="Sheriff Badge" class="header-logo">
+                    <h1>Task Board</h1>
+                    <div class="date-time" id="dateTime"></div>
+                </div>
+                <div id="tvTasksContainer">
+                    <div class="loading">Loading tasks...</div>
+                </div>
             </div>
-            <div id="tvTasksContainer">
-                <div class="loading">Loading tasks...</div>
+            <div class="webpage-section" id="webpageSection" style="display: none;">
+                <iframe id="webpageFrame" src=""></iframe>
             </div>
         </div>
 
@@ -387,6 +456,72 @@
                 </div>
 
                 <div class="panel-section">
+                    <h2>Display Settings</h2>
+                    <div class="form-group">
+                        <label>Split View Mode</label>
+                        <select id="splitViewMode">
+                            <option value="off">Off - Tasks Only (Full Screen)</option>
+                            <option value="on">On - Tasks + Webpage (Split Screen)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="webpageUrlGroup" style="display: none;">
+                        <label>Webpage URL</label>
+                        <input type="url" id="webpageUrl" placeholder="https://example.com">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Enter the full URL including https://
+                        </small>
+                    </div>
+                    <button onclick="saveDisplaySettings()" class="btn btn-success">Save Display Settings</button>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Visual Customization</h2>
+                    <div class="form-group">
+                        <label>Badge Size (px)</label>
+                        <input type="number" id="badgeSize" min="50" max="400" step="10" value="150" placeholder="150">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 150px (Recommended: 100-250)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Header Section Height (px)</label>
+                        <input type="number" id="headerSectionHeight" min="100" max="600" step="20" placeholder="Auto">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Leave empty for auto-height. Fixed height keeps header consistent.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Header Text Size (rem)</label>
+                        <input type="number" id="headerSize" min="2" max="8" step="0.5" value="4" placeholder="4">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 4rem (Recommended: 2-6)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Task Font Size (rem)</label>
+                        <input type="number" id="taskFontSize" min="0.8" max="3" step="0.1" value="1.5" placeholder="1.5">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 1.5rem (Recommended: 1-2.5)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Task Card Height (px)</label>
+                        <input type="number" id="taskCardHeight" min="50" max="300" step="10" placeholder="Auto">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Leave empty for auto-height
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Horizontal Divider Position (%)</label>
+                        <input type="number" id="dividerPosition" min="20" max="80" step="5" value="50" placeholder="50">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Default: 50% (tasks take top 50%, webpage takes bottom 50%)
+                        </small>
+                    </div>
+                    <button onclick="saveVisualSettings()" class="btn btn-success">Save Visual Settings</button>
+                </div>
+
+                <div class="panel-section">
                     <h2>Current Tasks</h2>
                     <div id="adminTasksList">
                         <div class="loading">Loading tasks...</div>
@@ -399,6 +534,18 @@
     <script>
         let currentMode = 'tv'; // 'tv' or 'admin'
         let tasks = [];
+        let displaySettings = {
+            splitView: false,
+            webpageUrl: ''
+        };
+        let visualSettings = {
+            headerSize: '4rem',
+            taskFontSize: '1.5rem',
+            taskCardHeight: 'auto',
+            dividerPosition: '50vh',
+            headerSectionHeight: 'auto',
+            badgeSize: '150px'
+        };
         let refreshInterval;
 
         // API endpoints
@@ -408,9 +555,13 @@
         async function init() {
             // Try to load tasks, but use localStorage as fallback
             await loadTasks();
+            await loadDisplaySettings();
+            await loadVisualSettings();
             updateDateTime();
             setInterval(updateDateTime, 1000);
             startAutoRefresh();
+            applyDisplaySettings();
+            applyVisualSettings();
         }
 
         // Fallback to localStorage if Netlify functions aren't working
@@ -554,15 +705,24 @@
                 return;
             }
 
+            // Sort tasks by priority: high -> medium -> low
+            const priorityOrder = { high: 1, medium: 2, low: 3 };
+            const sortedTasks = activeTasks.sort((a, b) => {
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
+
             const html = `
                 <div class="tasks-grid">
-                    ${activeTasks.map(task => `
+                    ${sortedTasks.map(task => `
                         <div class="task-card ${task.completed ? 'completed' : ''}">
-                            <h3>${escapeHtml(task.title)}</h3>
-                            ${task.description ? `<p>${escapeHtml(task.description)}</p>` : ''}
+                            <div class="task-card-content">
+                                <h3>${escapeHtml(task.title)}</h3>
+                                ${task.description ? `<p>${escapeHtml(task.description)}</p>` : ''}
+                            </div>
                             <span class="task-priority priority-${task.priority}">
                                 ${task.priority.toUpperCase()}
                             </span>
+                        </div>
                         </div>
                     `).join('')}
                 </div>
@@ -667,6 +827,150 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Load display settings
+        async function loadDisplaySettings() {
+            try {
+                const data = localStorage.getItem('displaySettings');
+                if (data) {
+                    displaySettings = JSON.parse(data);
+                }
+            } catch (error) {
+                console.error('Error loading display settings:', error);
+            }
+            
+            // Update UI in admin panel
+            document.getElementById('splitViewMode').value = displaySettings.splitView ? 'on' : 'off';
+            document.getElementById('webpageUrl').value = displaySettings.webpageUrl || '';
+            updateWebpageUrlVisibility();
+        }
+
+        // Save display settings
+        async function saveDisplaySettings() {
+            const splitView = document.getElementById('splitViewMode').value === 'on';
+            const webpageUrl = document.getElementById('webpageUrl').value.trim();
+            
+            if (splitView && !webpageUrl) {
+                showStatus('Please enter a webpage URL for split view mode', 'error');
+                return;
+            }
+            
+            displaySettings = {
+                splitView: splitView,
+                webpageUrl: webpageUrl
+            };
+            
+            try {
+                localStorage.setItem('displaySettings', JSON.stringify(displaySettings));
+                showStatus('Display settings saved successfully!', 'success');
+                applyDisplaySettings();
+            } catch (error) {
+                showStatus('Error saving display settings', 'error');
+            }
+        }
+
+        // Apply display settings to TV view
+        function applyDisplaySettings() {
+            const tvDisplay = document.getElementById('tvDisplay');
+            const webpageSection = document.getElementById('webpageSection');
+            const webpageFrame = document.getElementById('webpageFrame');
+            
+            if (displaySettings.splitView && displaySettings.webpageUrl) {
+                // Enable split view
+                tvDisplay.classList.add('split-view');
+                webpageSection.style.display = 'block';
+                webpageFrame.src = displaySettings.webpageUrl;
+            } else {
+                // Disable split view
+                tvDisplay.classList.remove('split-view');
+                webpageSection.style.display = 'none';
+                webpageFrame.src = '';
+            }
+        }
+
+        // Update webpage URL field visibility
+        function updateWebpageUrlVisibility() {
+            const splitViewMode = document.getElementById('splitViewMode').value;
+            const webpageUrlGroup = document.getElementById('webpageUrlGroup');
+            
+            if (splitViewMode === 'on') {
+                webpageUrlGroup.style.display = 'block';
+            } else {
+                webpageUrlGroup.style.display = 'none';
+            }
+        }
+
+        // Event listener for split view mode change
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('splitViewMode').addEventListener('change', updateWebpageUrlVisibility);
+        });
+
+        // Load visual settings
+        async function loadVisualSettings() {
+            try {
+                const data = localStorage.getItem('visualSettings');
+                if (data) {
+                    visualSettings = JSON.parse(data);
+                }
+            } catch (error) {
+                console.error('Error loading visual settings:', error);
+            }
+            
+            // Update UI in admin panel
+            const headerSize = parseFloat(visualSettings.headerSize) || 4;
+            const taskFontSize = parseFloat(visualSettings.taskFontSize) || 1.5;
+            const taskCardHeight = visualSettings.taskCardHeight === 'auto' ? '' : parseInt(visualSettings.taskCardHeight);
+            const dividerPosition = parseInt(visualSettings.dividerPosition) || 50;
+            const headerSectionHeight = visualSettings.headerSectionHeight === 'auto' ? '' : parseInt(visualSettings.headerSectionHeight);
+            const badgeSize = parseInt(visualSettings.badgeSize) || 150;
+            
+            document.getElementById('headerSize').value = headerSize;
+            document.getElementById('taskFontSize').value = taskFontSize;
+            document.getElementById('taskCardHeight').value = taskCardHeight;
+            document.getElementById('dividerPosition').value = dividerPosition;
+            document.getElementById('headerSectionHeight').value = headerSectionHeight;
+            document.getElementById('badgeSize').value = badgeSize;
+        }
+
+        // Save visual settings
+        async function saveVisualSettings() {
+            const headerSize = parseFloat(document.getElementById('headerSize').value) || 4;
+            const taskFontSize = parseFloat(document.getElementById('taskFontSize').value) || 1.5;
+            const taskCardHeightInput = document.getElementById('taskCardHeight').value;
+            const taskCardHeight = taskCardHeightInput ? `${taskCardHeightInput}px` : 'auto';
+            const dividerPosition = parseInt(document.getElementById('dividerPosition').value) || 50;
+            const headerSectionHeightInput = document.getElementById('headerSectionHeight').value;
+            const headerSectionHeight = headerSectionHeightInput ? `${headerSectionHeightInput}px` : 'auto';
+            const badgeSize = parseInt(document.getElementById('badgeSize').value) || 150;
+            
+            visualSettings = {
+                headerSize: `${headerSize}rem`,
+                taskFontSize: `${taskFontSize}rem`,
+                taskCardHeight: taskCardHeight,
+                dividerPosition: `${dividerPosition}vh`,
+                headerSectionHeight: headerSectionHeight,
+                badgeSize: `${badgeSize}px`
+            };
+            
+            try {
+                localStorage.setItem('visualSettings', JSON.stringify(visualSettings));
+                showStatus('Visual settings saved successfully!', 'success');
+                applyVisualSettings();
+            } catch (error) {
+                showStatus('Error saving visual settings', 'error');
+            }
+        }
+
+        // Apply visual settings to the page
+        function applyVisualSettings() {
+            const root = document.documentElement;
+            root.style.setProperty('--header-size', visualSettings.headerSize);
+            root.style.setProperty('--task-font-size', visualSettings.taskFontSize);
+            root.style.setProperty('--task-card-height', visualSettings.taskCardHeight);
+            root.style.setProperty('--divider-height', visualSettings.dividerPosition);
+            root.style.setProperty('--header-section-height', visualSettings.headerSectionHeight);
+            root.style.setProperty('--badge-size', visualSettings.badgeSize);
         }
 
         // Start the app
