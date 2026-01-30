@@ -132,7 +132,9 @@
             height: var(--badge-size);
             display: block;
             object-fit: contain;
-            background: transparent;
+            background: transparent !important;
+            mix-blend-mode: normal;
+            image-rendering: high-quality;
         }
 
         .tv-header .header-content {
@@ -457,7 +459,7 @@
 
             <div class="admin-content">
                 <div class="panel-section">
-                    <h2>Add New Task</h2>
+                    <h2 id="formTitle">Add New Task</h2>
                     <div id="statusMessage" class="status-message"></div>
                     <form id="addTaskForm">
                         <div class="form-group">
@@ -489,7 +491,11 @@
                                 </label>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Task</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">Add Task</button>
+                            <button type="button" class="btn btn-danger" id="cancelBtn" style="display: none;" onclick="cancelEdit()">Cancel</button>
+                        </div>
+                    </form>
                     </form>
                 </div>
 
@@ -572,6 +578,7 @@
     <script>
         let currentMode = 'tv'; // 'tv' or 'admin'
         let tasks = [];
+        let editingIndex = null; // Track which task is being edited
         let displaySettings = {
             splitView: false,
             webpageUrl: ''
@@ -785,6 +792,9 @@
                         <p>${task.description ? escapeHtml(task.description) : 'No description'} ${task.years && task.years.length > 0 ? '• Years: ' + task.years.join(', ') : ''}</p>
                     </div>
                     <div class="task-actions">
+                        <button class="btn btn-primary btn-small" onclick="editTask(${index})">
+                            ✏️ Edit
+                        </button>
                         <button class="btn btn-success btn-small" onclick="toggleComplete(${index})">
                             ${task.completed ? '↩️ Undo' : '✓ Done'}
                         </button>
@@ -798,7 +808,7 @@
             container.innerHTML = html;
         }
 
-        // Add task
+        // Add/Edit task
         document.getElementById('addTaskForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -812,21 +822,39 @@
                 return;
             }
 
-            const newTask = {
-                id: Date.now(),
-                title,
-                description,
-                years,
-                completed: false,
-                createdAt: new Date().toISOString()
-            };
+            if (editingIndex !== null) {
+                // Edit existing task
+                tasks[editingIndex] = {
+                    ...tasks[editingIndex],
+                    title,
+                    description,
+                    years
+                };
+                
+                if (await saveTasks()) {
+                    showStatus('Task updated successfully!', 'success');
+                    cancelEdit();
+                    renderAdminList();
+                    renderTVDisplay();
+                }
+            } else {
+                // Add new task
+                const newTask = {
+                    id: Date.now(),
+                    title,
+                    description,
+                    years,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
 
-            tasks.unshift(newTask); // Add to beginning
-            
-            if (await saveTasks()) {
-                showStatus('Task added successfully!', 'success');
-                document.getElementById('addTaskForm').reset();
-                renderAdminList();
+                tasks.unshift(newTask); // Add to beginning
+                
+                if (await saveTasks()) {
+                    showStatus('Task added successfully!', 'success');
+                    document.getElementById('addTaskForm').reset();
+                    renderAdminList();
+                }
             }
         });
 
@@ -849,6 +877,48 @@
                     renderTVDisplay();
                 }
             }
+        }
+
+        // Edit task
+        function editTask(index) {
+            editingIndex = index;
+            const task = tasks[index];
+            
+            // Populate form with task data
+            document.getElementById('taskTitle').value = task.title;
+            document.getElementById('taskDescription').value = task.description || '';
+            
+            // Uncheck all year checkboxes first
+            document.querySelectorAll('.year-checkbox').forEach(cb => cb.checked = false);
+            
+            // Check the years for this task
+            if (task.years && task.years.length > 0) {
+                task.years.forEach(year => {
+                    const checkbox = document.querySelector(`.year-checkbox[value="${year}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+            
+            // Update UI for edit mode
+            document.getElementById('formTitle').textContent = 'Edit Task';
+            document.getElementById('submitBtn').textContent = 'Update Task';
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+            
+            // Scroll to form
+            document.getElementById('addTaskForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel edit
+        function cancelEdit() {
+            editingIndex = null;
+            
+            // Reset form
+            document.getElementById('addTaskForm').reset();
+            
+            // Update UI back to add mode
+            document.getElementById('formTitle').textContent = 'Add New Task';
+            document.getElementById('submitBtn').textContent = 'Add Task';
+            document.getElementById('cancelBtn').style.display = 'none';
         }
 
         // Show status message
