@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Display System</title>
+    <title>Patrol CALEA Proofs</title>
     <style>
         :root {
             --header-size: 4rem;
@@ -23,14 +23,34 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2d2d2d;
             min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background-image: url('./badge.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.05;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .mode-toggle {
@@ -186,29 +206,21 @@
             margin: 0;
         }
 
-        .task-card .task-priority {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            white-space: nowrap;
+        .task-card .task-years {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
             flex-shrink: 0;
         }
 
-        .priority-high {
-            background: #fee;
-            color: #c33;
-        }
-
-        .priority-medium {
-            background: #ffeaa7;
-            color: #d63031;
-        }
-
-        .priority-low {
-            background: #dfe6e9;
-            color: #2d3436;
+        .task-card .year-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #4a90e2;
+            color: white;
         }
 
         /* Admin Mode */
@@ -423,7 +435,7 @@
                 <div class="tv-header">
                     <img src="./badge.png" alt="Sheriff Badge" class="header-logo">
                     <div class="header-content">
-                        <h1>Patrol CALEA Requests</h1>
+                        <h1>Patrol CALEA Proofs</h1>
                         <div class="date-time" id="dateTime"></div>
                     </div>
                 </div>
@@ -457,12 +469,25 @@
                             <textarea id="taskDescription" placeholder="Enter task description (optional)"></textarea>
                         </div>
                         <div class="form-group">
-                            <label>Priority</label>
-                            <select id="taskPriority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                            </select>
+                            <label>Years Needed</label>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                                    <input type="checkbox" name="year" value="2024" class="year-checkbox">
+                                    2024
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                                    <input type="checkbox" name="year" value="2025" class="year-checkbox">
+                                    2025
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                                    <input type="checkbox" name="year" value="2026" class="year-checkbox">
+                                    2026
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                                    <input type="checkbox" name="year" value="2027" class="year-checkbox">
+                                    2027
+                                </label>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Add Task</button>
                     </form>
@@ -718,10 +743,9 @@
                 return;
             }
 
-            // Sort tasks by priority: high -> medium -> low
-            const priorityOrder = { high: 1, medium: 2, low: 3 };
+            // Sort tasks alphabetically/numerically by title
             const sortedTasks = activeTasks.sort((a, b) => {
-                return priorityOrder[a.priority] - priorityOrder[b.priority];
+                return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
             });
 
             const html = `
@@ -731,11 +755,13 @@
                             <div class="task-card-content">
                                 <h3>${escapeHtml(task.title)}</h3>
                                 ${task.description ? `<p>${escapeHtml(task.description)}</p>` : ''}
+                                ${task.years && task.years.length > 0 ? `
+                                    <div class="task-years">
+                                        <span style="font-weight: 600; color: #333;">Years needed:</span>
+                                        ${task.years.map(year => `<span class="year-badge">${year}</span>`).join('')}
+                                    </div>
+                                ` : ''}
                             </div>
-                            <span class="task-priority priority-${task.priority}">
-                                ${task.priority.toUpperCase()}
-                            </span>
-                        </div>
                         </div>
                     `).join('')}
                 </div>
@@ -756,7 +782,7 @@
                 <div class="task-list-item ${task.completed ? 'completed' : ''}">
                     <div class="task-info ${task.completed ? 'completed' : ''}">
                         <h4>${escapeHtml(task.title)}</h4>
-                        <p>${task.description ? escapeHtml(task.description) : 'No description'} • ${task.priority}</p>
+                        <p>${task.description ? escapeHtml(task.description) : 'No description'} ${task.years && task.years.length > 0 ? '• Years: ' + task.years.join(', ') : ''}</p>
                     </div>
                     <div class="task-actions">
                         <button class="btn btn-success btn-small" onclick="toggleComplete(${index})">
@@ -778,7 +804,8 @@
             
             const title = document.getElementById('taskTitle').value.trim();
             const description = document.getElementById('taskDescription').value.trim();
-            const priority = document.getElementById('taskPriority').value;
+            const yearCheckboxes = document.querySelectorAll('.year-checkbox:checked');
+            const years = Array.from(yearCheckboxes).map(cb => cb.value);
 
             if (!title) {
                 showStatus('Please enter a task title', 'error');
@@ -789,7 +816,7 @@
                 id: Date.now(),
                 title,
                 description,
-                priority,
+                years,
                 completed: false,
                 createdAt: new Date().toISOString()
             };
