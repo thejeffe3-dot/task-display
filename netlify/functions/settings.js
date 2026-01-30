@@ -13,7 +13,12 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const store = getStore('settings');
+    // Get store with explicit configuration
+    const store = getStore({
+      name: 'settings',
+      siteID: process.env.NETLIFY_SITE_ID || context.site?.id,
+      token: process.env.NETLIFY_AUTH_TOKEN || context.token
+    });
 
     if (event.httpMethod === 'GET') {
       try {
@@ -34,6 +39,7 @@ exports.handler = async (event, context) => {
           })
         };
       } catch (error) {
+        console.error('Error reading from blob store:', error);
         return {
           statusCode: 200,
           headers,
@@ -68,6 +74,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   } catch (error) {
+    console.error('Error:', error);
     return {
       statusCode: 500,
       headers,
