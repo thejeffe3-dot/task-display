@@ -845,12 +845,14 @@
         // Load display settings
         async function loadDisplaySettings() {
             try {
-                const data = localStorage.getItem('displaySettings');
-                if (data) {
-                    displaySettings = JSON.parse(data);
+                const response = await fetch(`${API_BASE}/settings`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySettings = data.displaySettings || displaySettings;
                 }
             } catch (error) {
-                console.error('Error loading display settings:', error);
+                console.log('Using default display settings:', error.message);
             }
             
             // Update UI in admin panel
@@ -875,10 +877,26 @@
             };
             
             try {
-                localStorage.setItem('displaySettings', JSON.stringify(displaySettings));
-                showStatus('Display settings saved successfully!', 'success');
-                applyDisplaySettings();
+                // Save to API
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        displaySettings: displaySettings,
+                        visualSettings: visualSettings
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus('Display settings saved successfully!', 'success');
+                    applyDisplaySettings();
+                } else {
+                    throw new Error('Failed to save settings');
+                }
             } catch (error) {
+                console.error('Error saving display settings:', error);
                 showStatus('Error saving display settings', 'error');
             }
         }
@@ -922,12 +940,14 @@
         // Load visual settings
         async function loadVisualSettings() {
             try {
-                const data = localStorage.getItem('visualSettings');
-                if (data) {
-                    visualSettings = JSON.parse(data);
+                const response = await fetch(`${API_BASE}/settings`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    visualSettings = data.visualSettings || visualSettings;
                 }
             } catch (error) {
-                console.error('Error loading visual settings:', error);
+                console.log('Using default visual settings:', error.message);
             }
             
             // Update UI in admin panel
@@ -967,10 +987,26 @@
             };
             
             try {
-                localStorage.setItem('visualSettings', JSON.stringify(visualSettings));
-                showStatus('Visual settings saved successfully!', 'success');
-                applyVisualSettings();
+                // Save to API
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        displaySettings: displaySettings,
+                        visualSettings: visualSettings
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus('Visual settings saved successfully!', 'success');
+                    applyVisualSettings();
+                } else {
+                    throw new Error('Failed to save settings');
+                }
             } catch (error) {
+                console.error('Error saving visual settings:', error);
                 showStatus('Error saving visual settings', 'error');
             }
         }
