@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Diagnostic Tool</h1>
+    <p>Use this page to test if your Netlify Functions are working correctly.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Check Tasks API (GET)</h2>
+        <p>Tests if the tasks function can be reached and returns data.</p>
+        <button onclick="testTasksGet()">Run Test</button>
+        <div id="tasksGetResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Save Test Task (POST)</h2>
+        <p>Tests if tasks can be saved to the API.</p>
+        <button onclick="testTasksPost()">Run Test</button>
+        <div id="tasksPostResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Check Settings API (GET)</h2>
+        <p>Tests if the settings function can be reached and returns data.</p>
+        <button onclick="testSettingsGet()">Run Test</button>
+        <div id="settingsGetResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Save Test Settings (POST)</h2>
+        <p>Tests if settings can be saved to the API.</p>
+        <button onclick="testSettingsPost()">Run Test</button>
+        <div id="settingsPostResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Network Info</h2>
+        <p>Shows your current URL and API endpoints.</p>
+        <button onclick="showNetworkInfo()">Show Info</button>
+        <div id="networkInfo"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/.netlify/functions';
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+
+        async function testTasksGet() {
+            showResult('tasksGetResult', 'Testing...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/tasks`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('tasksGetResult', 
+                        `✅ SUCCESS!\n\nStatus: ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'success');
+                } else {
+                    showResult('tasksGetResult', 
+                        `⚠️ WARNING: Got response but status is ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('tasksGetResult', 
+                    `❌ ERROR!\n\n${error.message}\n\nThis usually means:\n- Function not deployed\n- Network issue\n- CORS problem`, 
+                    'error');
+            }
+        }
+
+        async function testTasksPost() {
+            showResult('tasksPostResult', 'Testing...', 'info');
+            try {
+                const testTask = {
+                    tasks: [{
+                        id: Date.now(),
+                        title: 'Test Task from Diagnostic',
+                        description: 'If you see this, the API is working!',
+                        priority: 'high',
+                        completed: false,
+                        createdAt: new Date().toISOString()
+                    }]
+                };
+
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testTask)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('tasksPostResult', 
+                        `✅ SUCCESS!\n\nStatus: ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}\n\nNow try Test 1 again to see if the task was saved.`, 
+                        'success');
+                } else {
+                    showResult('tasksPostResult', 
+                        `⚠️ WARNING: Got response but status is ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('tasksPostResult', 
+                    `❌ ERROR!\n\n${error.message}`, 
+                    'error');
+            }
+        }
+
+        async function testSettingsGet() {
+            showResult('settingsGetResult', 'Testing...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/settings`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('settingsGetResult', 
+                        `✅ SUCCESS!\n\nStatus: ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'success');
+                } else {
+                    showResult('settingsGetResult', 
+                        `⚠️ WARNING: Got response but status is ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('settingsGetResult', 
+                    `❌ ERROR!\n\n${error.message}\n\nThis usually means:\n- Settings function not deployed\n- Network issue`, 
+                    'error');
+            }
+        }
+
+        async function testSettingsPost() {
+            showResult('settingsPostResult', 'Testing...', 'info');
+            try {
+                const testSettings = {
+                    displaySettings: {
+                        splitView: true,
+                        webpageUrl: 'https://example.com'
+                    },
+                    visualSettings: {
+                        headerSize: '4rem',
+                        taskFontSize: '1.5rem',
+                        taskCardHeight: 'auto',
+                        dividerPosition: '50vh',
+                        headerSectionHeight: 'auto',
+                        badgeSize: '150px'
+                    }
+                };
+
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testSettings)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('settingsPostResult', 
+                        `✅ SUCCESS!\n\nStatus: ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}\n\nNow try Test 3 again to see if settings were saved.`, 
+                        'success');
+                } else {
+                    showResult('settingsPostResult', 
+                        `⚠️ WARNING: Got response but status is ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('settingsPostResult', 
+                    `❌ ERROR!\n\n${error.message}`, 
+                    'error');
+            }
+        }
+
+        function showNetworkInfo() {
+            const info = `Current URL: ${window.location.href}
+API Base: ${API_BASE}
+
+Full API URLs:
+- Tasks: ${window.location.origin}${API_BASE}/tasks
+- Settings: ${window.location.origin}${API_BASE}/settings
+
+Instructions:
+1. Try opening these URLs directly in your browser
+2. They should return JSON (not 404)
+3. If you get 404, the functions aren't deployed
+
+Check Netlify Dashboard:
+1. Go to your site in Netlify
+2. Click "Functions" tab
+3. You should see "tasks" and "settings" functions listed`;
+
+            showResult('networkInfo', info, 'info');
+        }
+    </script>
+</body>
+</html>
