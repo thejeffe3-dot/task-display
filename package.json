@@ -1,0 +1,19 @@
+{
+  "name": "task-display-netlify",
+  "version": "1.0.0",
+  "description": "Task display system for Raspberry Pi TV with Netlify backend",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "keywords": [
+    "tasks",
+    "dashboard",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "license": "MIT"
+}
